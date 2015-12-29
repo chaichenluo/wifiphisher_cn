@@ -307,28 +307,40 @@ def shutdown():
 
 def get_interfaces():
     interfaces = {"monitor": [], "managed": [], "all": []}
+    n = 0
+    print (interfaces)
     proc = Popen(['iwconfig'], stdout=PIPE, stderr=DN)
     for line in proc.communicate()[0].split('\n'):
-        if len(line) == 0:
-            continue  # Isn't an empty string
+    	
+        #if len(line) == 0:
+        #    continue  # Isn't an empty string
+        #print (line[0])
         if line[0] != ' ':  # Doesn't start with space
-            wired_search = re.search('eth[0-9]|em[0-9]|p[1-9]p[1-9]', line)
-            if not wired_search:  # Isn't wired
+            wired_search = re.search('eth[0-9]|em[0-9]|p[1-9]p[1-9]|ra[0-9]', line)
+            if wired_search:  # Isn't wired
                 iface = line[:line.find(' ')]  # is the interface
+                print (iface)
                 if 'Mode:Monitor' in line:
                     interfaces["monitor"].append(iface)
                 elif 'IEEE 802.11' in line:
                     interfaces["managed"].append(iface)
-                interfaces["all"].append(iface)
+                interfaces["all"].append(iface)    
+				
+        if n == 0:
+            break  # Isn't an empty string
+
+	n = n + 1
+	print (iface)
     return interfaces
 
 
 def get_iface(mode="all", exceptions=["_wifi"]):
     ifaces = get_interfaces()[mode]
+    print (ifaces)
     for i in ifaces:
         if i not in exceptions:
             return i
-    return False
+    return "ra0"		#False Added usb wifi ra0 manually.
 
 
 def reset_interfaces():
@@ -425,6 +437,8 @@ def channel_hop(mon_iface):
 def sniffing(interface, cb):
     '''This exists for if/when I get deauth working
     so that it's easy to call sniff() in a thread'''
+    print '[' + T + '*' + W + '] LJZLJZLJZ3 ' + interface
+
     sniff(iface=interface, prn=cb, store=0)
 
 
@@ -933,10 +947,16 @@ if __name__ == "__main__":
     inet_iface = get_internet_interface()
     if not args.jamminginterface:
         mon_iface = get_iface(mode="monitor", exceptions=[inet_iface])
+        mon_iface = "ra0"
+        print '[' + T + '*' + W + '] LJZLJZLJZ0 ' + mon_iface
+
         iface_to_monitor = False
     else:
         mon_iface = False
         iface_to_monitor = args.jamminginterface
+
+    print '[' + T + '*' + W + '] LJZLJZLJZ1 ' + mon_iface
+   
     if not mon_iface:
         if args.jamminginterface:
             iface_to_monitor = args.jamminginterface
@@ -949,6 +969,8 @@ if __name__ == "__main__":
                  )
             )
         mon_iface = start_mode(iface_to_monitor, "monitor")
+       	print ('[' + T + '*' + W + '] mon_iface ' + mon_iface)
+
     wj_iface = mon_iface
     if not args.apinterface:
         ap_iface = get_iface(mode="managed", exceptions=[iface_to_monitor])
@@ -991,6 +1013,9 @@ if __name__ == "__main__":
     hop = Thread(target=channel_hop, args=(mon_iface,))
     hop.daemon = True
     hop.start()
+
+    print '[' + T + '*' + W + '] LJZLJZLJZ2 ' + mon_iface
+
     sniffing(mon_iface, targeting_cb)
     channel, essid, ap_mac = copy_AP()
     hop_daemon_running = False
